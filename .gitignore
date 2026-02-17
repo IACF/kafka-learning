@@ -1,0 +1,14 @@
+# IDE / editor
+.cursor/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.env
+.env.local
