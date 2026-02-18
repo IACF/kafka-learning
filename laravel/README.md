@@ -54,17 +54,13 @@ A resposta inclui o `topic` e o `body` enviado ao Kafka.
 
 ## 4. Consumer (receber mensagens)
 
-Rodar em **outro terminal** (processo contínuo). Com KRaft em single-broker o group coordinator pode falhar; use **partição fixa** para as mensagens aparecerem:
-
-```bash
-docker compose run --rm app php artisan kafka:consume-laravel-events --assign-partition=0
-```
-
-Sem partição fixa (usa consumer group; só funciona se o coordinator estiver disponível):
+Rodar em **outro terminal** (processo contínuo). O consumer usa **consumer group** (subscribe) por padrão; o Kafka na raiz está configurado com `KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1` para o coordinator funcionar em single-broker KRaft.
 
 ```bash
 docker compose run --rm app php artisan kafka:consume-laravel-events
 ```
+
+Alternativa com **partição fixa** (sem consumer group): `--assign-partition=0`.
 
 Outras opções: `--topic=laravel-events`, `--group=meu-grupo`. Ao disparar o producer (passo 3), as mensagens devem aparecer no consumer.
 
@@ -99,7 +95,7 @@ O `docker-compose.yml` já define essas variáveis; para rodar fora do Docker, c
    ```
 
 2. **Consumer inicia mas nunca mostra "[timestamp] Recebido" (subscribe / consumer group)**  
-   Pode aparecer `COORDINATOR_NOT_AVAILABLE` ou "Waiting for coordinator". O **consumer group (subscribe) ainda não funciona** neste ambiente KRaft single-broker — ver **[CONSUMER-GROUP-ISSUE.md](CONSUMER-GROUP-ISSUE.md)** para detalhes e o que falta resolver. **Workaround:** usar partição fixa:
+   Pode aparecer `COORDINATOR_NOT_AVAILABLE` ou "Waiting for coordinator". O broker precisa de `KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1` no `docker-compose.yml` da raiz (ver **[CONSUMER-GROUP-ISSUE.md](CONSUMER-GROUP-ISSUE.md)**). Após adicionar e reiniciar o Kafka, rode de novo o consumer. **Workaround:** usar partição fixa:
    ```bash
    docker compose run --rm app php artisan kafka:consume-laravel-events --assign-partition=0
    ```

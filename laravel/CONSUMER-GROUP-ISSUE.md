@@ -1,11 +1,28 @@
 # Problema: Consumer group (subscribe) não funciona
 
-**Status:** em aberto — precisa ser resolvido.  
-**Impacto:** não é possível usar Kafka com consumer group (subscribe) neste ambiente; hoje o consumo só funciona com partição fixa (`--assign-partition=0`), o que não atende uso real com múltiplos consumers e offset por grupo.
+**Status:** ✅ **resolvido** (2026-02-18).  
+**Solução:** Configurar `KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1` no broker (ver [Solução aplicada](#solução-aplicada) abaixo).
 
 ---
 
-## Sintomas
+## Solução aplicada
+
+Em cluster **KRaft com um único broker**, o tópico interno `__consumer_offsets` (usado pelo group coordinator) é criado com um *replication factor* que por padrão pode ser maior que 1. Com apenas um broker, o coordinator não consegue atender às requisições e retorna **COORDINATOR_NOT_AVAILABLE**.
+
+**Correção:** No `docker-compose.yml` da raiz do repositório, foi adicionada a variável de ambiente no serviço `kafka`:
+
+```yaml
+KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+```
+
+Assim o broker cria `__consumer_offsets` com replication factor 1 e o group coordinator fica disponível. Após **reiniciar o container Kafka** (`docker compose up -d --force-recreate kafka`), o consumer em modo subscribe passa a receber mensagens normalmente.
+
+- **Arquivo alterado:** `../docker-compose.yml`
+- **Workaround com partição fixa** (`--assign-partition=0`) continua disponível para cenários em que não se queira usar consumer group.
+
+---
+
+## Sintomas (antes da correção)
 
 Quando o comando `kafka:consume-laravel-events` é executado **sem** `--assign-partition` (ou seja, usando **subscribe** no tópico com consumer group):
 
@@ -44,45 +61,15 @@ Conclusão: o problema está na **disponibilidade do group coordinator** em clus
 
 ---
 
-## Workaround atual (não substitui subscribe)
+## Workaround alternativo (partição fixa)
 
-Enquanto o coordinator não funciona, o consumo foi possível usando **partição fixa** (assign), sem consumer group:
+Se em algum ambiente o coordinator não estiver disponível, ainda é possível consumir usando **partição fixa** (assign), sem consumer group:
 
 ```bash
 php artisan kafka:consume-laravel-events --assign-partition=0
 ```
 
-- **Limitações:** não há consumer group, não há commit de offset por grupo, não escala com múltiplos consumers no mesmo grupo. Serve só para validar producer/consumer; **não atende uso real com subscribe**.
-
----
-
-## O que precisa ser feito (resolver de fato)
-
-Objetivo: **fazer o subscribe (consumer group) funcionar** para que:
-
-- O consumer use `group.id` e receba mensagens via subscribe (sem `--assign-partition`).
-- Auto-commit (ou commit manual) funcione, sem "Waiting for coordinator".
-- Múltiplos consumers no mesmo grupo possam ser usados no futuro.
-
-Possíveis direções (a investigar e implementar):
-
-1. **Configuração do broker KRaft**
-   - Verificar na documentação do Apache Kafka (4.x) se há parâmetros ou requisitos para o group coordinator em single-broker KRaft (ex.: algum flag, timeout, ou criação do tópico interno `__consumer_offsets`).
-   - Checar logs do container Kafka ao subir o consumer (erros ou avisos relacionados a coordinator ou `__consumer_offsets`).
-
-2. **Cluster com mais de um broker**
-   - Testar com 2+ brokers em KRaft para ver se o coordinator passa a responder (muitos problemas de coordinator em single-broker deixam de ocorrer com mais nós).
-
-3. **Bugs conhecidos / issues**
-   - Pesquisar por `COORDINATOR_NOT_AVAILABLE` + KRaft + single broker (e variantes) em:
-     - [Apache Kafka JIRA](https://issues.apache.org/jira/projects/KAFKA)
-     - [Kafka documentation](https://kafka.apache.org/documentation/)
-   - Ver se há workaround oficial ou fix em versão mais recente.
-
-4. **Alternativa de stack**
-   - Se for inviável resolver com KRaft single-broker, avaliar:
-     - Kafka com Zookeeper (se ainda suportado na versão desejada), ou
-     - Mais nós no cluster KRaft.
+- **Limitações:** não há consumer group, não há commit de offset por grupo, não escala com múltiplos consumers no mesmo grupo.
 
 ---
 
