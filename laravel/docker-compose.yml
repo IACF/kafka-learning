@@ -1,0 +1,29 @@
+# Fase 1: Laravel 11 + Kafka (SASL)
+# Pré-requisito: Kafka na raiz (cd .. && docker compose up -d) e ACLs (../scripts/setup-acls-laravel.sh)
+# Uso: docker compose up -d   ou  docker compose run --rm app <comando>
+
+services:
+  app:
+    build: .
+    container_name: laravel-kafka-app
+    ports:
+      - "8000:8000"
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_SASL_USERNAME: laravel
+      KAFKA_SASL_PASSWORD: laravel-secret
+      KAFKA_CONSUMER_GROUP_ID: laravel-consumer-group
+      KAFKA_TOPIC: laravel-events
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/vendor
+    networks:
+      - kafka-network
+    restart: "no"
+
+networks:
+  kafka-network:
+    name: kafka-network
+    external: true

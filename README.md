@@ -2,7 +2,7 @@
 
 Projeto de aprendizado de Kafka com Laravel 11 e NestJS. O plano completo está em [PLANO.md](PLANO.md).
 
-## Fase 0: Kafka (implementada)
+## Fase 0: Kafka (implementada) + SASL/ACL
 
 Ambiente Kafka na raiz para uso pelas fases seguintes.
 
@@ -107,3 +107,27 @@ docker compose down
 ```
 
 A rede `kafka-network` fica disponível para os projetos Laravel e NestJS (Fases 1 e 2) se conectarem ao broker pelo hostname `kafka:9092`.
+
+### SASL e ACL (Fases 1 e 2)
+
+O broker está configurado com **SASL PLAIN** na porta 9092. Credenciais (em `kafka-config/kafka_server_jaas.conf`):
+
+- **admin:** usuário `admin`, senha `admin-secret` (super user; Kafka UI e scripts de ACL).
+- **Laravel (Fase 1):** usuário `laravel`, senha `laravel-secret`.
+
+Após subir o Kafka, rode **uma vez** o script de ACLs para o Laravel:
+
+```bash
+chmod +x scripts/setup-acls-laravel.sh
+./scripts/setup-acls-laravel.sh
+```
+
+---
+
+## Fase 1: Laravel 11 (implementada)
+
+Laravel 11 em `laravel/` como **producer** e **consumer** com SASL. Ver [laravel/README.md](laravel/README.md) para:
+
+- Como subir o Laravel (docker-compose em `laravel/`)
+- Credenciais/ACLs usadas
+- Como rodar o consumer e disparar o producer
