@@ -60,8 +60,6 @@ Rodar em **outro terminal** (processo contínuo). O consumer usa **consumer grou
 docker compose run --rm app php artisan kafka:consume-laravel-events
 ```
 
-Alternativa com **partição fixa** (sem consumer group): `--assign-partition=0`.
-
 Outras opções: `--topic=laravel-events`, `--group=meu-grupo`. Ao disparar o producer (passo 3), as mensagens devem aparecer no consumer.
 
 ## Variáveis de ambiente (Kafka)
@@ -95,10 +93,7 @@ O `docker-compose.yml` já define essas variáveis; para rodar fora do Docker, c
    ```
 
 2. **Consumer inicia mas nunca mostra "[timestamp] Recebido" (subscribe / consumer group)**  
-   Pode aparecer `COORDINATOR_NOT_AVAILABLE` ou "Waiting for coordinator". O broker precisa de `KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1` no `docker-compose.yml` da raiz (ver **[CONSUMER-GROUP-ISSUE.md](CONSUMER-GROUP-ISSUE.md)**). Após adicionar e reiniciar o Kafka, rode de novo o consumer. **Workaround:** usar partição fixa:
-   ```bash
-   docker compose run --rm app php artisan kafka:consume-laravel-events --assign-partition=0
-   ```
+   Pode aparecer `COORDINATOR_NOT_AVAILABLE` ou "Waiting for coordinator". O broker precisa de `KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1` no `docker-compose.yml` da raiz (ver **[CONSUMER-GROUP-ISSUE.md](CONSUMER-GROUP-ISSUE.md)**). Após adicionar e reiniciar o Kafka, rode de novo o consumer.
 
 3. **Outro consumer group**  
    Se usar `--group=meu-grupo`, é preciso conceder READ nesse grupo (ou manter o grupo padrão `laravel-consumer-group`).
